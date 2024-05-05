@@ -29,37 +29,8 @@ class Controlador: # Como el controlador es el sistema, será la clase Observer 
     def fijar_temp(self,registro):
         self.datos_temp.append(registro)
         self.sensor.set_registro(registro)
-        time.sleep(5)
-    
-    def actualizar(self,registro): 
-        print(f"El sistema ha recibido un valor de temperatura de {registro[1]}ºC en la fecha {registro[0]}")
-    
 
-#Clases de OBSERVER
-class Publicador: 
-    def __init__(self):
-        self._suscriptor = Controlador.obtener_instancia() # el sistema siempre será el suscriptor.
-    
-                        
-    # No hará falta el método delete ni add suscriptor porque el sistema siempre estará suscrito a las notificiones del sensor.
-
-    def notificar_sub(self, registro): 
-        self._suscriptor.actualizar(registro)
-
-#Clases de Chain of responsibility-------------
-class SensorTemp(Publicador): #MANEJADOR y PUBLICADOR.
-    def __init__(self, sucesor=None):
-        super().__init__()
-        self.sucesor = sucesor
-    
-    def calculo(self,orden,datos):
-        pass
-    
-    def set_registro(self,registro): 
-        self.notificar_sub(registro) # se notifica al sistema
-        # se hacen las comprobaciones.
-
-        datos_temp = self._suscriptor.obtener_datos()
+        datos_temp = self.datos_temp
 
         calculos = CalculoEstadisticos()
 
@@ -93,6 +64,36 @@ class SensorTemp(Publicador): #MANEJADOR y PUBLICADOR.
         calculos.calculo(primero,datos_temp) # cálculos estadísticos.
         calculos.calculo(segundo,datos_temp) # umbral.
         calculos.calculo(tercero,datos_temp) # incremento.
+
+        time.sleep(5)
+    
+    def actualizar(self,registro): 
+        print(f"El sistema ha recibido un valor de temperatura de {registro[1]}ºC en la fecha {registro[0]}")
+    
+
+#Clases de OBSERVER
+class Publicador: 
+    def __init__(self):
+        self._suscriptor = Controlador.obtener_instancia() # el sistema siempre será el suscriptor.
+    
+                        
+    # No hará falta el método delete ni add suscriptor porque el sistema siempre estará suscrito a las notificiones del sensor.
+
+    def notificar_sub(self, registro): 
+        self._suscriptor.actualizar(registro)
+
+#Clases de Chain of responsibility-------------
+class SensorTemp(Publicador): #MANEJADOR y PUBLICADOR.
+    def __init__(self, sucesor=None):
+        super().__init__()
+        self.sucesor = sucesor
+    
+    def calculo(self,orden,datos):
+        pass
+    
+    def set_registro(self,registro): 
+        self.notificar_sub(registro) # se notifica al sistema
+
          
 
 
