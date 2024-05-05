@@ -2,7 +2,7 @@ from datetime import datetime
 import time
 from abc import ABC, abstractmethod
 from random import randint
-import functools
+from functools import reduce
 import numpy as np
 import statistics
 
@@ -32,7 +32,7 @@ class Controlador: # Como el controlador es el sistema, será la clase Observer 
         time.sleep(5)
     
     def actualizar(self,registro): 
-        print(f"El sistema ha recibido un valor de temperatura: {registro[1]} en la fecha {registro[0]}")
+        print(f"El sistema ha recibido un valor de temperatura de {registro[1]}ºC en la fecha {registro[0]}")
     
 
 #Clases de OBSERVER
@@ -72,6 +72,7 @@ class SensorTemp(Publicador): #MANEJADOR y PUBLICADOR.
 
         fin = False
         while fin == False:
+
             opcion = int(input("Seleccione el estadístico que desea obtener de la temperatura durante los ultimos 60s \n 1 - Media y desviación típica \n 2 - Cuantiles \n 3 - Temperatura máxima y mínima\n"))
             if opcion == 1:
                 estrategia = mediaDesviacion(umbral)
@@ -105,48 +106,59 @@ class CalculoEstadisticos(SensorTemp):
         self.estrategia = estrategia
 
     def calculo(self,orden,datos):
-        if len(datos) < 12: 
-            print('Recogiendo datos...')
-        else:
-            self.estrategia.calculo(datos)
+        self.estrategia.calculo(orden,datos)
 
 class mediaDesviacion(SensorTemp): 
     def calculo(self,orden,datos):
         if orden.nivel == 1:
-            #nueva lista con los ultimos 12 datos (60s)
-            T = datos[-12:]
-            d = [i[1] for i in T] #lista sin fechas
+            if len(datos) < 12:
+                print('Aún no se puede hacer el cálculo de la media y la desviación típica porque no se han recogido los suficientes datos.')
+            else:
+                T = datos[-12:]
+                d = [i[1] for i in T] #lista sin fechas
 
-            media = functools.reduce(lambda x, y: x+y, d)/len(d)
-            print('Temperatura media: ', round(media,2))
+                media = reduce(lambda x, y: x+y, d)/len(d)
+                print('Temperatura media: ', round(media,2))
 
-            desviacion = np.sqrt(sum(map(lambda x: (x-media)**2,d))/(len(d)-1))
-            print('Desviación típica: ', round(desviacion,2) )
+                desviacion = np.sqrt(sum(map(lambda x: (x-media)**2,d))/(len(d)-1))
+                print('Desviación típica: ', round(desviacion,2) )
 
         elif self.sucesor:
-            self.sucesor.calculo(datos)
+            self.sucesor.calculo(orden,datos)
+
+
 
 class cuantiles(SensorTemp):
     def calculo(self,orden,datos):
         if orden.nivel == 1:
-            T = datos[-12:]
-            d = [i[1] for i in T]
-            cuantiles = statistics.quantiles(d, n=4)
-            print(f"El primer cuantil del 25% es {cuantiles[0]}, el que reúne el 50% de los datos es {cuantiles[1]} y el que divide los datos en un 75% es {cuantiles[2]}")
-
+            if len(datos) < 12:
+                print('Aún no se puede hacer el cálculo de los cuantiles porque no se han recogido los suficientes datos.')
+            else:
+                T = datos[-12:]
+                d = [i[1] for i in T]
+                cuantiles = statistics.quantiles(d, n=4)
+                print(f"El primer cuantil del 25% es {cuantiles[0]}, el que reúne el 50% de los datos es {cuantiles[1]} y el que divide los datos en un 75% es {cuantiles[2]}")
 
         elif self.sucesor:
-            self.sucesor.calculo(datos)
+            self.sucesor.calculo(orden,datos)
+
+
 
 class ValoresMaxMin(SensorTemp):
     def calculo(self,orden,datos):
         if orden.nivel == 1:
-            T = datos[-12:]
-            d = [i[1] for i in T]
-            print(f'Max:{max(d)}ºC\nMin:{min(d)}ºC')
+            if len(datos) < 12:
+                print('Aún no se puede hacer el cálculo de los valores máximos y mínimos porque no se han recogido los suficientes datos.')
+            else:
+                T = datos[-12:]
+                d = [i[1] for i in T]
+                maximo = reduce(lambda x,y:x if (x>y) else y,d)
+                minimo = reduce(lambda x,y:x if (x<y) else y,d)
+                print(f'Max:{maximo}ºC\nMin:{minimo}ºC')
 
+                
         elif self.sucesor:
-            self.sucesor.calculo(datos)
+            self.sucesor.calculo(orden,datos)
 
 #FIN STRATEGY-----------------
 
@@ -157,24 +169,29 @@ class Umbral(SensorTemp):
             dato = [temp[1]] #nos quedamos solo con el valor de temp y en formato lista
             umbral = len(list(filter(lambda x: x >= 30.2,dato)))==1 
             if umbral:
-                print(f"La temperatura actual de {temp[0]}ºC sobrepasa el umbral de temperatura.")
+                print(f"La temperatura actual de {temp[0][1]}ºC sobrepasa el umbral de temperatura de 30.2ºC.")
+            else:
+                print(f"La temperatura actual de {temp[0][1]}ºC NO sobrepasa el umbral de temperatura de 30.2ºC.")
 
         elif self.sucesor:
-            self.sucesor.calculo(datos)
+            self.sucesor.calculo(orden,datos)
 
 class AumentoTemp(SensorTemp): #ultimos 30s (6 ultimos puestos de la lista)
     def calculo(self,orden,datos):
-        if orden.nivel == 3:
-            T = datos[-6:]
-            d = [i[1] for i in T] # nos quedamos con las 6 últimas temperaturas solamente.
-            # Se calculan todos los incrementos de la temperatura anterior con la siguiente.
-            incrementoT = list(map(lambda x:abs(d[x+1]-d[x]),range(len(d)-1)))
-            tempbruscas = list(filter(lambda x: x>10,incrementoT))
-            if len(tempbruscas)>0:
-                print('Aumento de la temperatura detectado.')
+        if len(datos) < 6: 
+            print('Aún no se puede hacer el cálculo del incremento de temperatura. porque no se han recogido los suficientes datos.')
+        else:
+            if orden.nivel == 3:
+                T = datos[-6:]
+                d = [i[1] for i in T] # nos quedamos con las 6 últimas temperaturas solamente.
+                # Se calculan todos los incrementos de la temperatura anterior con la siguiente.
+                incrementoT = list(map(lambda x:abs(d[x+1]-d[x]),range(len(d)-1)))
+                tempbruscas = list(filter(lambda x: x>10,incrementoT))
+                if len(tempbruscas)>0:
+                    print('Aumento de la temperatura detectado.')
 
-        elif self.sucesor:
-            self.sucesor.calculo(datos)
+            elif self.sucesor:
+                self.sucesor.calculo(orden,datos)
 
 class Orden:
     def __init__(self,nivel):
@@ -210,6 +227,8 @@ if __name__ == '__main__':
         tupla_temp = (fecha,temp)
         controlador.fijar_temp(tupla_temp)
 
+
+# Ver cómo parar el bucle y arreglar lo del tiempo.
 
 
 
