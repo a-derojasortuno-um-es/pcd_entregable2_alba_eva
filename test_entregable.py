@@ -23,28 +23,29 @@ class Controlador: # Como el controlador es el sistema, será la clase Observer 
             cls._unicaInstancia = cls()
         return cls._unicaInstancia
     
-    def obtener_datos(self):
-        return self.datos_temp
-    
     def fijar_temp(self,registro):
         self.datos_temp.append(registro)
         self.sensor.set_registro(registro)
 
         datos_temp = self.datos_temp
 
-        calculos = CalculoEstadisticos()
 
         primero = Orden(1)
         segundo = Orden(2)
         tercero = Orden(3)
 
         aumento = AumentoTemp()
+
         umbral = Umbral(aumento)
+
+        calculos = CalculoEstadisticos()
+
+
 
         fin = False
         while fin == False:
 
-            opcion = int(input("Seleccione el estadístico que desea obtener de la temperatura durante los ultimos 60s \n 1 - Media y desviación típica \n 2 - Cuantiles \n 3 - Temperatura máxima y mínima\n"))
+            opcion = int(input("Seleccione el estadístico que desea obtener sobre la temperatura \n 1 - Media y desviación típica \n 2 - Cuantiles \n 3 - Temperatura máxima y mínima\n"))
             if opcion == 1:
                 estrategia = mediaDesviacion(umbral)
                 calculos.set_estrategia(estrategia)
@@ -59,13 +60,13 @@ class Controlador: # Como el controlador es el sistema, será la clase Observer 
                 fin = True
             else:
                 print("Opción incorrecta. Vuelva a intentarlo.")
-
         
+        time.sleep(5)
+
         calculos.calculo(primero,datos_temp) # cálculos estadísticos.
         calculos.calculo(segundo,datos_temp) # umbral.
         calculos.calculo(tercero,datos_temp) # incremento.
 
-        time.sleep(5)
     
     def actualizar(self,registro): 
         print(f"El sistema ha recibido un valor de temperatura de {registro[1]}ºC en la fecha {registro[0]}")
@@ -180,7 +181,7 @@ class Umbral(SensorTemp):
 class AumentoTemp(SensorTemp): #ultimos 30s (6 ultimos puestos de la lista)
     def calculo(self,orden,datos):
         if len(datos) < 6: 
-            print('Aún no se puede hacer el cálculo del incremento de temperatura. porque no se han recogido los suficientes datos.')
+            print('Aún no se puede hacer el cálculo del incremento de temperatura porque no se han recogido los suficientes datos.')
         else:
             if orden.nivel == 3:
                 T = datos[-6:]
@@ -222,11 +223,14 @@ class Orden:
 if __name__ == '__main__':
     controlador = Controlador.obtener_instancia()
     controlador.asignar_sensor()
-    for i in range(500):
+    i = 0
+    continuar = True
+    while i < 500 and continuar:
         fecha = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         temp = randint(5,40)
         tupla_temp = (fecha,temp)
         controlador.fijar_temp(tupla_temp)
+        continuar = bool(int(input("¿Deseas continuar incluyendo datos?\n Si desea continuar pulse 1, si no, pulse 0.\n")))
 
 
 # Ver cómo parar el bucle y arreglar lo del tiempo.
