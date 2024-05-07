@@ -11,8 +11,7 @@ import statistics
 class Publicador: 
     def __init__(self):
         self._suscriptor = Controlador.obtener_instancia() # el sistema siempre será el suscriptor.
-    
-                        
+     
     # No hará falta el método delete ni add suscriptor porque el sistema siempre estará suscrito a las notificiones del sensor.
 
     def notificar_sub(self, registro): 
@@ -42,7 +41,7 @@ class Controlador:
             cls._unicaInstancia = cls()
         return cls._unicaInstancia
     
-    def calculo(self,orden,datos):
+    def calculo(self,orden):
         pass
 
     def actualizar(self,registro): 
@@ -51,12 +50,10 @@ class Controlador:
         print("Se procede a realizar los cálculos...")
 
         self.datos_temp.append(registro)
-        datos_temp = self.datos_temp
 
-        primero = Orden(1)
-        segundo = Orden(2)
-        tercero = Orden(3)
+        datos = self.datos_temp
 
+   
         aumento = AumentoTemp()
 
         umbral = Umbral(aumento)
@@ -84,9 +81,9 @@ class Controlador:
         
         time.sleep(5)
 
-        calculos.calculo(primero,datos_temp) # cálculos estadísticos.
-        calculos.calculo(segundo,datos_temp) # umbral.
-        calculos.calculo(tercero,datos_temp) # incremento.
+        calculos.calculo(1,datos) # cálculos estadísticos.
+        calculos.calculo(2,datos) # umbral.
+        calculos.calculo(3,datos) # incremento.
     
 
     
@@ -105,7 +102,7 @@ class CalculoEstadisticos(Controlador):
 
 class mediaDesviacion(Controlador): 
     def calculo(self,orden,datos):
-        if orden.nivel == 1:
+        if orden == 1:
             if len(datos) < 12:
                 print('Aún no se puede hacer el cálculo de la media y la desviación típica porque no se han recogido los suficientes datos.')
             else:
@@ -123,7 +120,7 @@ class mediaDesviacion(Controlador):
 
 class cuantiles(Controlador):
     def calculo(self,orden,datos):
-        if orden.nivel == 1:
+        if orden == 1:
             if len(datos) < 12:
                 print('Aún no se puede hacer el cálculo de los cuantiles porque no se han recogido los suficientes datos.')
             else:
@@ -137,7 +134,7 @@ class cuantiles(Controlador):
 
 class ValoresMaxMin(Controlador):
     def calculo(self,orden,datos):
-        if orden.nivel == 1:
+        if orden == 1:
             if len(datos) < 12:
                 print('Aún no se puede hacer el cálculo de los valores máximos y mínimos porque no se han recogido los suficientes datos.')
             else:
@@ -155,7 +152,7 @@ class ValoresMaxMin(Controlador):
 
 class Umbral(Controlador):
     def calculo(self,orden,datos):
-        if orden.nivel == 2:
+        if orden == 2:
             temp = datos[-1] # última temperatura registrada
             dato = [temp[1]] #nos quedamos solo con el valor de temp y en formato lista
             umbral = len(list(filter(lambda x: x >= 30.2,dato)))==1 
@@ -172,7 +169,7 @@ class AumentoTemp(Controlador): #ultimos 30s (6 ultimos puestos de la lista)
         if len(datos) < 6: 
             print('Aún no se puede hacer el cálculo del incremento de temperatura porque no se han recogido los suficientes datos.\n')
         else:
-            if orden.nivel == 3:
+            if orden == 3:
                 T = datos[-6:]
                 d = [i[1] for i in T] # nos quedamos con las 6 últimas temperaturas solamente.
                 # Se calculan todos los incrementos de la temperatura anterior con la siguiente.
@@ -184,9 +181,6 @@ class AumentoTemp(Controlador): #ultimos 30s (6 ultimos puestos de la lista)
             elif self.sucesor:
                 self.sucesor.calculo(orden,datos)
 
-class Orden:
-    def __init__(self,nivel):
-        self.nivel = nivel
 
 #FIN CHAIN OF RESPONSABILITY-------------
 
@@ -198,7 +192,7 @@ if __name__ == '__main__':
         fecha = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         temp = randint(5,40)
         tupla_temp = (fecha,temp)
-        sensor.notificar_sub(tupla_temp)
+        sensor.fijar_temp(tupla_temp)
         continuar = bool(int(input("¿Deseas continuar incluyendo datos?\n Si desea continuar pulse 1, si no, pulse 0.\n")))
 
 
