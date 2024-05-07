@@ -1,21 +1,39 @@
 from datetime import datetime
 import time
-from abc import ABC, abstractmethod
 from random import randint
 from functools import reduce
 import numpy as np
 import statistics
 
-class Controlador: # Como el controlador es el sistema, será la clase Observer del patrón Observer.
-    _unicaInstancia = None
-    def __init__(self,sucesor=None):
-        # solo hay un suscriptor, el sistema, así que no hará falta ningún susctiptor más.
-        self.datos_temp = []
-        self.sensor = None
-        self.sucesor = sucesor
+#Clases de OBSERVER
+#PUBLICADOR
+
+class Publicador: 
+    def __init__(self):
+        self._suscriptor = Controlador.obtener_instancia() # el sistema siempre será el suscriptor.
     
-    def asignar_sensor(self):
-        self.sensor = SensorTemp()
+                        
+    # No hará falta el método delete ni add suscriptor porque el sistema siempre estará suscrito a las notificiones del sensor.
+
+    def notificar_sub(self, registro): 
+        self._suscriptor.actualizar(registro)
+
+
+class SensorTemp(Publicador): 
+    def __init__(self):
+        super().__init__() # se hereda al suscriptor.
+    
+    def fijar_temp(self, registro): 
+        self.notificar_sub(registro)
+    
+
+#Clases CHAIN OF RESPONSABILITY ---------
+#SUSCRIPTOR Y MANEJADOR
+class Controlador: 
+    _unicaInstancia = None
+    def __init__(self, sucesor = None):
+        self.sucesor = sucesor
+        self.datos_temp = []
     
     #Método por patrón singleton
     @classmethod
@@ -26,13 +44,14 @@ class Controlador: # Como el controlador es el sistema, será la clase Observer 
     
     def calculo(self,orden,datos):
         pass
-    
-    def fijar_temp(self,registro):
+
+    def actualizar(self,registro): 
+        print(f"El sistema ha recibido un valor de temperatura de {registro[1]}ºC en la fecha {registro[0]}")
+
+        print("Se procede a realizar los cálculos...")
+
         self.datos_temp.append(registro)
-        self.sensor.set_registro(registro)
-
         datos_temp = self.datos_temp
-
 
         primero = Orden(1)
         segundo = Orden(2)
@@ -43,8 +62,6 @@ class Controlador: # Como el controlador es el sistema, será la clase Observer 
         umbral = Umbral(aumento)
 
         calculos = CalculoEstadisticos()
-
-
 
         fin = False
         while fin == False:
@@ -70,38 +87,9 @@ class Controlador: # Como el controlador es el sistema, será la clase Observer 
         calculos.calculo(primero,datos_temp) # cálculos estadísticos.
         calculos.calculo(segundo,datos_temp) # umbral.
         calculos.calculo(tercero,datos_temp) # incremento.
-
-    
-    def actualizar(self,registro): 
-        print(f"El sistema ha recibido un valor de temperatura de {registro[1]}ºC en la fecha {registro[0]}")
     
 
-#Clases de OBSERVER
-class Publicador: 
-    def __init__(self):
-        self._suscriptor = Controlador.obtener_instancia() # el sistema siempre será el suscriptor.
     
-                        
-    # No hará falta el método delete ni add suscriptor porque el sistema siempre estará suscrito a las notificiones del sensor.
-
-    def notificar_sub(self, registro): 
-        self._suscriptor.actualizar(registro)
-
-#Clases de Chain of responsibility-------------
-class SensorTemp(Publicador): #MANEJADOR y PUBLICADOR.
-    def __init__(self, sucesor=None):
-        super().__init__()
-        #self.sucesor = sucesor
-    
-    #def calculo(self,orden,datos):
-    #    pass
-    
-    def set_registro(self,registro): 
-        self.notificar_sub(registro) # se notifica al sistema
-
-         
-
-
 #STRATEGY-----------
 class CalculoEstadisticos(Controlador): 
     def __init__(self,sucesor=None):
@@ -113,6 +101,7 @@ class CalculoEstadisticos(Controlador):
 
     def calculo(self,orden,datos):
         self.estrategia.calculo(orden,datos)
+
 
 class mediaDesviacion(Controlador): 
     def calculo(self,orden,datos):
@@ -132,8 +121,6 @@ class mediaDesviacion(Controlador):
         elif self.sucesor:
             self.sucesor.calculo(orden,datos)
 
-
-
 class cuantiles(Controlador):
     def calculo(self,orden,datos):
         if orden.nivel == 1:
@@ -147,8 +134,6 @@ class cuantiles(Controlador):
 
         elif self.sucesor:
             self.sucesor.calculo(orden,datos)
-
-
 
 class ValoresMaxMin(Controlador):
     def calculo(self,orden,datos):
@@ -175,9 +160,9 @@ class Umbral(Controlador):
             dato = [temp[1]] #nos quedamos solo con el valor de temp y en formato lista
             umbral = len(list(filter(lambda x: x >= 30.2,dato)))==1 
             if umbral:
-                print(f"La temperatura actual de {temp[0][1]}ºC sobrepasa el umbral de temperatura de 30.2ºC.")
+                print(f"La temperatura actual de {dato[0]}ºC sobrepasa el umbral de temperatura de 30.2ºC.")
             else:
-                print(f"La temperatura actual de {temp[0][1]}ºC NO sobrepasa el umbral de temperatura de 30.2ºC.")
+                print(f"La temperatura actual de {dato[0]}ºC NO sobrepasa el umbral de temperatura de 30.2ºC.")
 
         elif self.sucesor:
             self.sucesor.calculo(orden,datos)
@@ -185,7 +170,7 @@ class Umbral(Controlador):
 class AumentoTemp(Controlador): #ultimos 30s (6 ultimos puestos de la lista)
     def calculo(self,orden,datos):
         if len(datos) < 6: 
-            print('Aún no se puede hacer el cálculo del incremento de temperatura porque no se han recogido los suficientes datos.')
+            print('Aún no se puede hacer el cálculo del incremento de temperatura porque no se han recogido los suficientes datos.\n')
         else:
             if orden.nivel == 3:
                 T = datos[-6:]
@@ -205,39 +190,16 @@ class Orden:
 
 #FIN CHAIN OF RESPONSABILITY-------------
 
-#Función que crea el sensor con el orden de tareas indicado y pide la estrategia a aplicar
-# def crear_sensor():
-#     aumento = AumentoTemp()
-#     umbral = Umbral(aumento)
-
-#     opcion = int(input("Seleccione el estadístico que desea obtener de la temperatura durante los ultimos 60s \n 1 - Media y desviación típica \n 2 - Cuantiles \n 3 - Temperatura máxima y mínima"))
-#     if opcion == 1:
-#         estrategia = mediaDesviacion(umbral)
-#     elif opcion == 2:
-#         estrategia = cuantiles(umbral)
-#     elif opcion == 3:
-#         estrategia = ValoresMaxMin(umbral)
-#     else:
-#         print("Opción incorrecta. Vuelva a intentarlo.")
-
-#     calculos = CalculoEstadisticos(umbral,estrategia)
-#     sensor = SensorTemp(calculos)
-#     return sensor
-
 if __name__ == '__main__':
-    controlador = Controlador.obtener_instancia()
-    controlador.asignar_sensor()
+    sensor = SensorTemp()
     i = 0
     continuar = True
     while i < 500 and continuar:
         fecha = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         temp = randint(5,40)
         tupla_temp = (fecha,temp)
-        controlador.fijar_temp(tupla_temp)
+        sensor.notificar_sub(tupla_temp)
         continuar = bool(int(input("¿Deseas continuar incluyendo datos?\n Si desea continuar pulse 1, si no, pulse 0.\n")))
-
-
-# Ver cómo parar el bucle y arreglar lo del tiempo.
 
 
 
