@@ -8,10 +8,11 @@ import statistics
 
 class Controlador: # Como el controlador es el sistema, será la clase Observer del patrón Observer.
     _unicaInstancia = None
-    def __init__(self):
+    def __init__(self,sucesor=None):
         # solo hay un suscriptor, el sistema, así que no hará falta ningún susctiptor más.
         self.datos_temp = []
         self.sensor = None
+        self.sucesor = sucesor
     
     def asignar_sensor(self):
         self.sensor = SensorTemp()
@@ -22,6 +23,9 @@ class Controlador: # Como el controlador es el sistema, será la clase Observer 
         if not cls._unicaInstancia :
             cls._unicaInstancia = cls()
         return cls._unicaInstancia
+    
+    def calculo(self,orden,datos):
+        pass
     
     def fijar_temp(self,registro):
         self.datos_temp.append(registro)
@@ -87,10 +91,10 @@ class Publicador:
 class SensorTemp(Publicador): #MANEJADOR y PUBLICADOR.
     def __init__(self, sucesor=None):
         super().__init__()
-        self.sucesor = sucesor
+        #self.sucesor = sucesor
     
-    def calculo(self,orden,datos):
-        pass
+    #def calculo(self,orden,datos):
+    #    pass
     
     def set_registro(self,registro): 
         self.notificar_sub(registro) # se notifica al sistema
@@ -99,7 +103,7 @@ class SensorTemp(Publicador): #MANEJADOR y PUBLICADOR.
 
 
 #STRATEGY-----------
-class CalculoEstadisticos(SensorTemp): 
+class CalculoEstadisticos(Controlador): 
     def __init__(self,sucesor=None):
         self.estrategia = None 
         self.sucesor = sucesor
@@ -110,7 +114,7 @@ class CalculoEstadisticos(SensorTemp):
     def calculo(self,orden,datos):
         self.estrategia.calculo(orden,datos)
 
-class mediaDesviacion(SensorTemp): 
+class mediaDesviacion(Controlador): 
     def calculo(self,orden,datos):
         if orden.nivel == 1:
             if len(datos) < 12:
@@ -130,7 +134,7 @@ class mediaDesviacion(SensorTemp):
 
 
 
-class cuantiles(SensorTemp):
+class cuantiles(Controlador):
     def calculo(self,orden,datos):
         if orden.nivel == 1:
             if len(datos) < 12:
@@ -146,7 +150,7 @@ class cuantiles(SensorTemp):
 
 
 
-class ValoresMaxMin(SensorTemp):
+class ValoresMaxMin(Controlador):
     def calculo(self,orden,datos):
         if orden.nivel == 1:
             if len(datos) < 12:
@@ -164,7 +168,7 @@ class ValoresMaxMin(SensorTemp):
 
 #FIN STRATEGY-----------------
 
-class Umbral(SensorTemp):
+class Umbral(Controlador):
     def calculo(self,orden,datos):
         if orden.nivel == 2:
             temp = datos[-1] # última temperatura registrada
@@ -178,7 +182,7 @@ class Umbral(SensorTemp):
         elif self.sucesor:
             self.sucesor.calculo(orden,datos)
 
-class AumentoTemp(SensorTemp): #ultimos 30s (6 ultimos puestos de la lista)
+class AumentoTemp(Controlador): #ultimos 30s (6 ultimos puestos de la lista)
     def calculo(self,orden,datos):
         if len(datos) < 6: 
             print('Aún no se puede hacer el cálculo del incremento de temperatura porque no se han recogido los suficientes datos.')
