@@ -4,6 +4,7 @@ from random import randint
 from functools import reduce
 import numpy as np
 import statistics
+from statistics import mean,stdev
 
 #Clases de OBSERVER
 #PUBLICADOR
@@ -34,57 +35,59 @@ class Controlador:
         self.sucesor = sucesor
         self.datos_temp = []
     
-    #Método por patrón singleton
+    #Método por patrón Singleton
     @classmethod
     def obtener_instancia(cls):
         if not cls._unicaInstancia :
             cls._unicaInstancia = cls()
         return cls._unicaInstancia
     
-    def calculo(self,orden):
+    def calculo(self,orden,datos):
         pass
 
     def actualizar(self,registro): 
-        print(f"El sistema ha recibido un valor de temperatura de {registro[1]}ºC en la fecha {registro[0]}")
+        try:
+            print(f"El sistema ha recibido un valor de temperatura de {registro[1]}ºC en la fecha {registro[0]}")
 
-        print("Se procede a realizar los cálculos...")
+            print("Se procede a realizar los cálculos...")
 
-        self.datos_temp.append(registro)
+            self.datos_temp.append(registro)
 
-        datos = self.datos_temp
+            datos = self.datos_temp
 
    
-        aumento = AumentoTemp()
+            aumento = AumentoTemp()
 
-        umbral = Umbral(aumento)
+            umbral = Umbral(aumento)
 
-        calculos = CalculoEstadisticos()
+            calculos = CalculoEstadisticos()
 
-        fin = False
-        while fin == False:
+            fin = False
+            while fin == False:
 
-            opcion = int(input("Seleccione el estadístico que desea obtener sobre la temperatura \n 1 - Media y desviación típica \n 2 - Cuantiles \n 3 - Temperatura máxima y mínima\n"))
-            if opcion == 1:
-                estrategia = mediaDesviacion(umbral)
-                calculos.set_estrategia(estrategia)
-                fin = True
-            elif opcion == 2:
-                estrategia = cuantiles(umbral)
-                calculos.set_estrategia(estrategia)
-                fin = True
-            elif opcion == 3:
-                estrategia = ValoresMaxMin(umbral)
-                calculos.set_estrategia(estrategia)
-                fin = True
-            else:
-                print("Opción incorrecta. Vuelva a intentarlo.")
+                opcion = int(input("Seleccione el estadístico que desea obtener sobre la temperatura \n 1 - Media y desviación típica \n 2 - Cuantiles \n 3 - Temperatura máxima y mínima\n"))
+                if opcion == 1:
+                    estrategia = mediaDesviacion(umbral)
+                    calculos.set_estrategia(estrategia)
+                    fin = True
+                elif opcion == 2:
+                    estrategia = cuantiles(umbral)
+                    calculos.set_estrategia(estrategia)
+                    fin = True
+                elif opcion == 3:
+                    estrategia = ValoresMaxMin(umbral)
+                    calculos.set_estrategia(estrategia)
+                    fin = True
+                else:
+                    print("Opción incorrecta. Vuelva a intentarlo.")
         
-        time.sleep(5)
+            time.sleep(5)
 
-        calculos.calculo(1,datos) # cálculos estadísticos.
-        calculos.calculo(2,datos) # umbral.
-        calculos.calculo(3,datos) # incremento.
-    
+            calculos.calculo(1,datos) # cálculos estadísticos.
+            calculos.calculo(2,datos) # umbral.
+            calculos.calculo(3,datos) # incremento.
+        except TypeError:
+            print("La temperatura recibida no es del tipo int o float. Vuelve a introducir una temperatura válida.")
 
     
 #STRATEGY-----------
@@ -164,7 +167,7 @@ class Umbral(Controlador):
         elif self.sucesor:
             self.sucesor.calculo(orden,datos)
 
-class AumentoTemp(Controlador): #ultimos 30s (6 ultimos puestos de la lista)
+class AumentoTemp(Controlador): # últimos 30s (6 últimos puestos de la lista)
     def calculo(self,orden,datos):
         if len(datos) < 6: 
             print('Aún no se puede hacer el cálculo del incremento de temperatura porque no se han recogido los suficientes datos.\n')
@@ -174,12 +177,60 @@ class AumentoTemp(Controlador): #ultimos 30s (6 ultimos puestos de la lista)
                 d = [i[1] for i in T] # nos quedamos con las 6 últimas temperaturas solamente.
                 # Se calculan todos los incrementos de la temperatura anterior con la siguiente.
                 incrementoT = list(map(lambda x:abs(d[x+1]-d[x]),range(len(d)-1)))
-                tempbruscas = list(filter(lambda x: x>10,incrementoT))
-                if len(tempbruscas)>0:
+                tempbruscas = len(list(filter(lambda x: x>10,incrementoT)))>0
+                if tempbruscas:
                     print('Aumento de la temperatura detectado.')
 
             elif self.sucesor:
                 self.sucesor.calculo(orden,datos)
+
+
+# TEST UNITARIOS
+
+L = [1.5,2.2,4,14.7,27.4,31.3,24.7,34.8,]
+
+# Se comprueba si el cálculo de la media y la desviación es correcto.
+
+def media_desviacion(L):
+    media = reduce(lambda x, y: x+y, L)/len(L)
+    desviacion = np.sqrt(sum(map(lambda x: (x-media)**2,L))/(len(L)-1))
+    return media,desviacion
+   
+def test_media():
+    media,desviacion = media_desviacion(L)
+    assert media == mean(L)
+    assert desviacion == stdev(L)
+
+# El cálculos de los cuantiles como se ha hecho con la librería stadistics no hará falta comprobarlo.
+
+def max_min(L):
+    maximo = reduce(lambda x,y:x if (x>y) else y,L)
+    minimo = reduce(lambda x,y:x if (x<y) else y,L)
+    return maximo,minimo
+
+def test_max_min():
+    maximo,minimo = max_min(L)
+    assert maximo == max(L)
+    assert minimo == min(L)
+
+
+def incremento(L):
+    incrementoT = list(map(lambda x:abs(L[x+1]-L[x]),range(len(L)-1)))
+    tempbruscas = len(list(filter(lambda x: x>10,incrementoT)))>0
+    return tempbruscas
+
+
+def test_incremento():
+    assert incremento(L) == True # como sí hay incremento, la lista no debe estar vacía.
+
+
+def umbral(L):
+    umbral = len(list(filter(lambda x: x >= 30.2,L)))>0 # se modifica la función para que recoja todas las temperaturas que superan el umbral,
+    # porque tiene como parámetro de entrada una lista en vez de una temperatura solo. 
+    return umbral
+
+def test_umbral():
+    assert umbral(L) == True # como hay varias temperaturas que superan el umbral debería ser True.
 
 
 #FIN CHAIN OF RESPONSABILITY-------------
@@ -194,6 +245,11 @@ if __name__ == '__main__':
         tupla_temp = (fecha,temp)
         sensor.fijar_temp(tupla_temp)
         continuar = bool(int(input("¿Deseas continuar incluyendo datos?\n Si desea continuar pulse 1, si no, pulse 0.\n")))
+
+
+
+
+
 
 
 
