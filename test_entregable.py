@@ -11,7 +11,7 @@ from statistics import mean,stdev
 
 class Publicador: 
     def __init__(self):
-        self._suscriptor = Controlador.obtener_instancia() # el sistema siempre será el suscriptor.
+        self._suscriptor = Sistema.obtener_instancia() # el sistema siempre será el suscriptor.
      
     # No hará falta el método delete ni add suscriptor porque el sistema siempre estará suscrito a las notificiones del sensor.
 
@@ -29,7 +29,7 @@ class SensorTemp(Publicador):
 
 #Clases CHAIN OF RESPONSIBILITY ---------
 #SUSCRIPTOR Y MANEJADOR
-class Controlador: 
+class Sistema: 
     _unicaInstancia = None
     def __init__(self, sucesor = None):
         self.sucesor = sucesor
@@ -91,7 +91,7 @@ class Controlador:
 
     
 #STRATEGY-----------
-class CalculoEstadisticos(Controlador): 
+class CalculoEstadisticos(Sistema): 
     def __init__(self,sucesor=None):
         self.estrategia = None 
         self.sucesor = sucesor
@@ -103,7 +103,7 @@ class CalculoEstadisticos(Controlador):
         self.estrategia.calculo(orden,datos)
 
 
-class mediaDesviacion(Controlador): 
+class mediaDesviacion(Sistema): 
     def calculo(self,orden,datos):
         if orden == 1:
             if len(datos) < 12:
@@ -121,7 +121,7 @@ class mediaDesviacion(Controlador):
         elif self.sucesor:
             self.sucesor.calculo(orden,datos)
 
-class cuantiles(Controlador):
+class cuantiles(Sistema):
     def calculo(self,orden,datos):
         if orden == 1:
             if len(datos) < 12:
@@ -135,7 +135,7 @@ class cuantiles(Controlador):
         elif self.sucesor:
             self.sucesor.calculo(orden,datos)
 
-class ValoresMaxMin(Controlador):
+class ValoresMaxMin(Sistema):
     def calculo(self,orden,datos):
         if orden == 1:
             if len(datos) < 12:
@@ -153,7 +153,7 @@ class ValoresMaxMin(Controlador):
 
 #FIN STRATEGY-----------------
 
-class Umbral(Controlador):
+class Umbral(Sistema):
     def calculo(self,orden,datos):
         if orden == 2:
             temp = datos[-1] # última temperatura registrada
@@ -167,7 +167,7 @@ class Umbral(Controlador):
         elif self.sucesor:
             self.sucesor.calculo(orden,datos)
 
-class AumentoTemp(Controlador): # últimos 30s (6 últimos puestos de la lista)
+class AumentoTemp(Sistema): # últimos 30s (6 últimos puestos de la lista)
     def calculo(self,orden,datos):
         if len(datos) < 6: 
             print('Aún no se puede hacer el cálculo del incremento de temperatura porque no se han recogido los suficientes datos.\n')
@@ -183,7 +183,7 @@ class AumentoTemp(Controlador): # últimos 30s (6 últimos puestos de la lista)
 
             elif self.sucesor:
                 self.sucesor.calculo(orden,datos)
-                
+
 # -----FIN DEL CHAIN OF RESPONSIBILITY-----
 
 
