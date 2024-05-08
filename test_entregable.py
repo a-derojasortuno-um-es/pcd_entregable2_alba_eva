@@ -33,7 +33,7 @@ class Controlador:
     _unicaInstancia = None
     def __init__(self, sucesor = None):
         self.sucesor = sucesor
-        self.datos_temp = []
+        self._datos_temp = []
     
     #Método por patrón Singleton
     @classmethod
@@ -51,9 +51,9 @@ class Controlador:
 
             print("Se procede a realizar los cálculos...")
 
-            self.datos_temp.append(registro)
+            self._datos_temp.append(registro)
 
-            datos = self.datos_temp
+            datos = self._datos_temp
 
    
             aumento = AumentoTemp()
