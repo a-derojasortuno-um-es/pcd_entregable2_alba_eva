@@ -27,7 +27,7 @@ class SensorTemp(Publicador):
         self.notificar_sub(registro)
     
 
-#Clases CHAIN OF RESPONSABILITY ---------
+#Clases CHAIN OF RESPONSIBILITY ---------
 #SUSCRIPTOR Y MANEJADOR
 class Controlador: 
     _unicaInstancia = None
@@ -183,6 +183,8 @@ class AumentoTemp(Controlador): # últimos 30s (6 últimos puestos de la lista)
 
             elif self.sucesor:
                 self.sucesor.calculo(orden,datos)
+                
+# -----FIN DEL CHAIN OF RESPONSIBILITY-----
 
 
 # TEST UNITARIOS
@@ -233,7 +235,6 @@ def test_umbral():
     assert umbral(L) == True # como hay varias temperaturas que superan el umbral debería ser True.
 
 
-#FIN CHAIN OF RESPONSABILITY-------------
 
 if __name__ == '__main__':
     sensor = SensorTemp()
